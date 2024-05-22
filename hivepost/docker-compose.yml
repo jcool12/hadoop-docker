@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   hadoop:
-    image: ./hadoop
+    build: ./hadoop
     container_name: hadoop-debian12
     ports:
       - "50070:50070"
