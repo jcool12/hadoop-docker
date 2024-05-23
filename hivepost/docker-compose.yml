@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  hadoop:
+    build: ./hadoop  # Replace with your actual Hadoop Dockerfile path
+    container_name: hadoop
+    ports:
+      - "50070:50070"
+      - "8088:8088"
+      - "8042:8042"
+    volumes:
+      - hadoop-data:/opt/hadoop/dfs
+      #- ./hadoop/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+    networks:
+      - hadoopnet
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    restart: on-failure
+
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: hive
+      POSTGRES_USER: hiveuser
+      POSTGRES_PASSWORD: hivepassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - hadoopnet
+
+  hive:
+    build: ./hive  # Assumes you have a Dockerfile in the ./hive directory
+    container_name: hive
+    #env_file: ./hive/hive.env  # Reference to the environment file
+    environment:
+      POSTGRES_JDBC_VERSION: 42.2.24
+      POSTGRES_HOST: postgres  # Ensure PostgreSQL host is set
+      POSTGRES_DB: hive
+      POSTGRES_USER: hiveuser
+      POSTGRES_PASSWORD: hivepassword
+    depends_on:
+      - postgres
+      - hadoop
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    volumes:
+      - hivemetastore:/opt/hive-metastore
+      - ./hadoop_conf:/opt/hadoop/etc/hadoop  # Mount Hadoop configuration
+      #- ./hive/log4j.hive-properties:/opt/hive/conf/log4j.properties  # Add log4j properties
+    networks:
+      - hadoopnet
+
+volumes:
+  hadoop-data:
+  pgdata:
+  hivemetastore:
+
+networks:
+  hadoopnet:
+    driver: bridge
